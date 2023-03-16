@@ -1,0 +1,168 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: >
+  forward-api
+
+  Sample SAM Template for forward-api
+
+Parameters:
+  DynamoDBTable:
+    Default: forward-api-dev
+    Description: The environment for the stack
+    Type: String
+  DynamoDBPrimaryKey:
+    Default: user
+    Description: The environment for the stack
+    Type: String
+  DynamoDBArn:
+    Default: arn:aws:dynamodb:us-east-1:282277022428:table/forward-api-dev
+    Type: String
+
+Globals:
+  Function:
+    Timeout: 30
+    MemorySize: 1024
+    Environment:
+      Variables:
+        DB_TABLE: !Ref DynamoDBTable
+        DB_PRIMARY_KEY: !Ref DynamoDBPrimaryKey
+        TWITTER_USERNAME_REGEX: '^[A-Za-z0-9_]{1,15}$'
+
+Resources:
+  # ApplicationDB:
+  #   Type: AWS::Serverless::SimpleTable
+  #   DeletionPolicy: Delete
+  #   UpdateReplacePolicy: Retain
+  #   Properties:
+  #     TableName: !Ref DynamoDBTable
+  #     PrimaryKey:
+  #       Type: String
+  #       Name: user # Must be the same as DynamoDBPrimaryKey - CFN Linting not liking the parameter use
+
+  APIGateway:
+    Type: AWS::Serverless::Api
+    Properties:
+      StageName: dev
+
+  ScrapeFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      Role: !Ref FunctionReadWriteRole
+      Timeout: 500
+      MemorySize: 4096
+      PackageType: Image
+      Events:
+        Scrape:
+          Type: Api
+          Properties:
+            Path: /scrape
+            Method: post
+            RestApiId: !Ref APIGateway
+    Metadata:
+      Dockerfile: Dockerfile
+      DockerContext: scrape_function/
+      DockerTag: python3.9
+      DockerPlatform: linux/amd64
+
+  GetFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      Runtime: python3.9
+      CodeUri: get_handle_function/
+      Handler: lambda_handler.lambda_handler
+      Role: !Ref FunctionReadRole
+      Environment:
+        Variables:
+          PATH_PARAMETER: handle # MUST MATCH VALUE IN Events.Scrape.Path
+      Events:
+        Scrape:
+          Type: Api
+          Properties:
+            Path: /user/{handle}/profile_pic # MUST MATCH VALUE IN Environment.Variables.PATH_PARAMETER
+            Method: get
+            RestApiId: !Ref APIGateway
+
+  GetAllFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      Runtime: python3.9
+      CodeUri: get_all_function/
+      Handler: lambda_handler.lambda_handler
+      Role: !Ref FunctionReadRole
+      Events:
+        Scrape:
+          Type: Api
+          Properties:
+            Path: /users
+            Method: get
+            RestApiId: !Ref APIGateway
+
+
+  FunctionReadRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: DynamoDB-READ-Role
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service:
+                - lambda.amazonaws.com
+            Action:
+              - sts:AssumeRole
+      Policies:
+        - PolicyName: DynamoDB-READ-Policy
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - 'logs:*'
+                Resource: 'arn:aws:logs:*:*:*'
+              - Effect: Allow
+                Action:
+                  - dynamodb:Query
+                  - dynamodb:Scan
+                  - dynamodb:GetItem
+                Resource:
+                  - !Ref DynamoDBArn
+
+  FunctionReadWriteRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: DynamoDB-READ-Role
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service:
+                - lambda.amazonaws.com
+            Action:
+              - sts:AssumeRole
+      Policies:
+        - PolicyName: DynamoDB-READ-Policy
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - 'logs:*'
+                Resource: 'arn:aws:logs:*:*:*'
+              - Effect: Allow
+                Action:
+                  - dynamodb:Query
+                  - dynamodb:Scan
+                  - dynamodb:GetItem
+                  - dynamodb:PutItem
+                  - dynamodb:UpdateItem
+                  - dynamodb:DeleteItem
+                Resource:
+                  - !Ref DynamoDBArn
+
+
+Outputs:
+  APIURL:
+    Description: "API Gateway endpoint URL for Prod stage for Hello World function"
+    Value: !Sub "https://${APIGateway}.execute-api.${AWS::Region}.amazonaws.com/prod/"
