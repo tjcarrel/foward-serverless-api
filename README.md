@@ -1,74 +1,154 @@
-# forward-api
+# Python-Serverless-API
 
+The goal of the project was to develop a serverless web service in Python for managing profile pictures from Twitter. 
 
-## Deploy the sample application
+<br>
 
-The Serverless Application Model Command Line Interface (SAM CLI) is an extension of the AWS CLI that adds functionality for building and testing Lambda applications. It uses Docker to run your functions in an Amazon Linux environment that matches Lambda. It can also emulate your application's build environment and API.
+## Project Structure
 
-To use the SAM CLI, you need the following tools.
+- `template.yaml`
+    - AWS SAM template for deploying service
+- `scrape_function`
+    - `lambda_handler.py` - Lambda handler and function code
+    - `Dockerfile` - This function uses the Selenium package which requires additional software that is bundled as an image
+- `get_handle_function`
+- `get_all_function`
+    - `lambda_handler.py` - Lambda handler and function code
+    - `requirements.py` - Required Python packages
 
-* SAM CLI - [Install the SAM CLI](https://docs.aws.amazon.com/serverless-application-model/latest/developerguide/serverless-sam-cli-install.html)
-* [Python 3 installed](https://www.python.org/downloads/)
-* Docker - [Install Docker community edition](https://hub.docker.com/search/?type=edition&offering=community)
+<br>
+<br>
 
-To build and deploy your application for the first time, run the following in your shell:
+## Run and Test Locally
+<hr />
 
-```bash
-sam build --use-container
-sam deploy --guided
-```
+The web service can be run and tested via the SAM CLI, which requires these tools:
 
-The first command will build the source of your application. The second command will package and deploy your application to AWS, with a series of prompts:
+* [SAM CLI](https://docs.aws.amazon.com/serverless-application-model/latest/developerguide/serverless-sam-cli-install.html)
+* [Python 3](https://www.python.org/downloads/)
+* [Docker](https://hub.docker.com/search/?type=edition&offering=community)
 
-* **Stack Name**: The name of the stack to deploy to CloudFormation. This should be unique to your account and region, and a good starting point would be something matching your project name.
-* **AWS Region**: The AWS region you want to deploy your app to.
-* **Confirm changes before deploy**: If set to yes, any change sets will be shown to you before execution for manual review. If set to no, the AWS SAM CLI will automatically deploy application changes.
-* **Allow SAM CLI IAM role creation**: Many AWS SAM templates, including this example, create AWS IAM roles required for the AWS Lambda function(s) included to access AWS services. By default, these are scoped down to minimum required permissions. To deploy an AWS CloudFormation stack which creates or modifies IAM roles, the `CAPABILITY_IAM` value for `capabilities` must be provided. If permission isn't provided through this prompt, to deploy this example you must explicitly pass `--capabilities CAPABILITY_IAM` to the `sam deploy` command.
-* **Save arguments to samconfig.toml**: If set to yes, your choices will be saved to a configuration file inside the project, so that in the future you can just re-run `sam deploy` without parameters to deploy changes to your application.
-
-You can find your API Gateway Endpoint URL in the output values displayed after deployment.
-
-## Use the SAM CLI to build and test locally
-
-Build your application with the `sam build --use-container` command.
+Run the following command to build and start a local web server to test the endpoints:
 
 ```bash
-forward-api$ sam build --use-container
+sam build && sam local start-api
 ```
 
-The SAM CLI installs dependencies defined in `hello_world/requirements.txt`, creates a deployment package, and saves it in the `.aws-sam/build` folder.
-
-Test a single function by invoking it directly with a test event. An event is a JSON document that represents the input that the function receives from the event source. Test events are included in the `events` folder in this project.
-
-Run functions locally and invoke them with the `sam local invoke` command.
+While running, make a request to localhost:
 
 ```bash
-forward-api$ sam local invoke HelloWorldFunction --event events/event.json
+curl -H "Content-Type: application/json" -X POST http://localhost:3000/scrape -d '{"handle": "<handle>"}'
 ```
 
-The SAM CLI can also emulate your application's API. Use the `sam local start-api` to run the API locally on port 3000.
+
+<br>
+<br>
+
+## Deploy to AWS
+<hr />
+
+Using `template.yaml`, the service can be deployed to an AWS account from the command line.
+
+Build the template then deploy the resources with these two commands:
 
 ```bash
-forward-api$ sam local start-api
-forward-api$ curl http://localhost:3000/
-```
+sam build -u -t template.yaml 
 
-The SAM CLI reads the application template to determine the API's routes and the functions that they invoke. The `Events` property on each function's definition includes the route and method for each path.
-
-```yaml
-      Events:
-        HelloWorld:
-          Type: Api
-          Properties:
-            Path: /hello
-            Method: get
+sam deploy --guided --capabilities CAPABILITY_NAMED_IAM
 ```
 
 
-## Cleanup
-
-To delete the sample application that you created, use the AWS CLI. Assuming you used your project name for the stack name, you can run the following:
+To delete the stack, run the below command:
 
 ```bash
-aws cloudformation delete-stack --stack-name forward-api
+sam delete --stack-name <stack-name>
 ```
+
+<br>
+<br>
+
+## API Specification
+
+<br>
+
+### Scrape profile image for handle
+<hr />
+
+<br>
+
+#### Request
+`POST /scrape/`
+
+     curl -H "Content-Type: application/json" -X POST http://localhost:3000/scrape -d '{"handle": "<handle>"}'
+
+#### Response
+
+    Status: 200 OK
+    Content-Type: application/json
+
+    {
+        "handle": "<handle>", 
+        "profileUrl": "..."
+    }
+
+<br>
+
+### Get profile image url for handle
+<hr />
+
+<br>
+
+#### Request
+
+`GET /user/{handle}/profile_pic`
+
+    curl -i -H 'Accept: application/json' http://localhost:3000/user/<handle>/profile_pic
+
+#### Response
+
+    Status: 200 OK
+    Content-Type: application/json
+
+    {
+        "profile_url": "..."
+    }
+
+<br>
+
+### Get all stored users
+<hr />
+
+<br>
+
+#### Request
+
+`GET /users`
+
+    curl -i -H 'Accept: application/json' http://localhost:3000/users?lastKey={optionalKey}
+
+#### Response
+
+    Status: 200 OK
+    Content-Type: application/json
+
+    [
+        {
+            "lastKey": "<lastKey or ''>"
+            "users": {
+                "handle": "...".
+                "profile_url": "..."
+            }
+        }
+    ]
+
+<br>
+<br>
+
+## Design Choices
+
+- AWS SAM
+    - Allows for efficient packaging of cloud resources with the ability to test your application locally. I did checkout Serverless but ultimately prefer CloudFormation + SAM.
+- Lambda Structure
+    - There were many ways to service through Lambda. Due to the size of the project, I decided to make each API route its own function. This allows each function to have dedicated logging and error handling, and minor changes to one from causing bugs in another. As applications grow and the code overlap becomes larger, it could be advantageous to bundle them together.
+-  DynamoDB
+    - To fullfill the serverless requirements and have the ability to deploy the entire service from one file, DynamoDB was a good choice that fit the use case. However, for larger-scale applications I'd prefer to use MongoDB for a NoSQL DB or explore SQL options.

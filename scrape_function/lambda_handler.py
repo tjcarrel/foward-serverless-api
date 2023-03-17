@@ -34,6 +34,8 @@ def lambda_handler(event, context):
     # Call helper to extract profile_url for the user
     profile_url = get_profile_url(driver, handle)
 
+    driver.quit()
+
     if not profile_url:
         return {
             'statusCode': 404,

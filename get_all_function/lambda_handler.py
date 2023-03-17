@@ -32,7 +32,7 @@ def lambda_handler(event, context):
     return {
         'statusCode': 200,
         'body': json.dumps({
-            'lastKey': updatedLastKey,
+            'lastKey': updatedLastKey if updatedLastKey else None,
             'users': users
         }),
     }
