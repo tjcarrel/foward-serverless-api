@@ -20,7 +20,6 @@ The goal of the project was to develop a serverless web service in Python for ma
 <br>
 
 ## Run and Test Locally
-<hr />
 
 The web service can be run and tested via the SAM CLI, which requires these tools:
 
@@ -45,7 +44,6 @@ curl -H "Content-Type: application/json" -X POST http://localhost:3000/scrape -d
 <br>
 
 ## Deploy to AWS
-<hr />
 
 Using `template.yaml`, the service can be deployed to an AWS account from the command line.
 
@@ -72,9 +70,6 @@ sam delete --stack-name <stack-name>
 <br>
 
 ### Scrape profile image for handle
-<hr />
-
-<br>
 
 #### Request
 `POST /scrape/`
@@ -94,9 +89,6 @@ sam delete --stack-name <stack-name>
 <br>
 
 ### Get profile image url for handle
-<hr />
-
-<br>
 
 #### Request
 
@@ -116,9 +108,6 @@ sam delete --stack-name <stack-name>
 <br>
 
 ### Get all stored users
-<hr />
-
-<br>
 
 #### Request
 
