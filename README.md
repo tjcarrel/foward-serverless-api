@@ -1,6 +1,6 @@
 # Python-Serverless-API
 
-The goal of the project was to develop a serverless web service in Python for managing profile pictures from Twitter. 
+The goal of the project was to develop a serverless web service in Python for managing profile pictures from Twitter. The API is currently live at `https://5xvdmxr3o3.execute-api.us-east-1.amazonaws.com/prod/`
 
 <br>
 
@@ -26,6 +26,10 @@ The web service can be run and tested via the SAM CLI, which requires these tool
 * [SAM CLI](https://docs.aws.amazon.com/serverless-application-model/latest/developerguide/serverless-sam-cli-install.html)
 * [Python 3](https://www.python.org/downloads/)
 * [Docker](https://hub.docker.com/search/?type=edition&offering=community)
+
+<b>Apple Silicon Note:</b> You must have the `Use Rosetta for x86/amd64 emulation on Apple Silicon` Docker setting enabled under <i>Features in development</i>
+
+<br>
 
 Run the following command to build and start a local web server to test the endpoints:
 
