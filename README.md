@@ -67,8 +67,6 @@ sam delete --stack-name <stack-name>
 
 ## API Specification
 
-<br>
-
 ### Scrape profile image for handle
 
 #### Request
